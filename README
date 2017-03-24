@@ -1,0 +1,123 @@
+ https://github.com/lancaster-joseph/lineserver.git
+
+ To build, run build.sh with sudo.
+ To run, run run.sh with the path of the data file relative to the
+    location of the run.sh script.  Note that the port can be set
+    using config.yml.
+
+ 0. Requirements
+
+    Gem must be installed.
+
+    This implementation was built and tested in the following
+    environment:
+
+    Bash
+    OSX 10.12.3
+    Gem 2.6.8
+    Ruby 2.4.0p0 (2016-12-24 revision 57164) x86_64-darwin16
+
+    2011 Mac Book Air 
+    1.6 GHz Intel Core i5
+    4GB memory
+    ~50GB free space
+
+ I. How does the code work?
+
+I create an index into the data file.  This avoids loading much of the
+data file into memory or the need to search or iterate through it.  To
+do this I create a file that contains the byte offset for every line in
+the data file.  I use the byte offset to seek into the data file.  I 
+pad the lines in the index to be the same number of bytes so I can index
+into it.  I also conver the number of bytes into base 36 so that I can
+represent the number with fewer bytes in the index, saving a bit of space
+in the index.  I assume that every character is represented as a byte since the files
+are ASCII.
+
+You must supply a data file path that is relative to the run shell script.
+
+ II. Note on Alternatives and Potential Improvements
+
+I could have padded the data file but since I cannot predict the length
+of lines it could make an already very large file impractically large.
+I could have saved some more space in the index by dividing up the index
+into files that require the same number of bytes for every line, rather
+than padding.  I could potentially cache some of the results, but I have
+no information about the request distribution.  I started out with the
+intention to make the implementation more configurable as is evident
+by the config.json, but Sinatra through me a few surprises and
+I decided to finish the exercise without the extras.
+
+ III. Performance Relative to File Size
+ 
+ I tested on up to 10 GB and the system performed very well with
+ response times under a tenth of a second.  The system I developed this
+ on could not support a larger file.  However, I expect the implementation
+ to scale pretty well, given the index, depending on the hardware.  
+ The real caveat is the amount of
+ time required to generate the index, which will obviously grow with the
+ size of the data file.  The amount of time required for a 10GB file seems
+ reasonable.  Given that 10 bytes are used per line, 10 * the number of 
+ lines in the file are required for the index.
+
+ I did not test for line size, but it seems somewhat pointless since a
+ long line will still be a long line whether I am pulling it directly from
+ a file or from a database or otherwise.
+
+ IV. Performance Relative to the Number of Users
+
+ I tested the server using the ab command.
+
+ ab -n 1000 -c 100
+
+ This sends 1000 requests with a concurrency of up to 100
+ users at a time.  My system couldn't handle much more than that.
+ This particular test finished within a second with each request
+ return in under a tenth of a second.  I expect the server should
+ scale pretty well since my implementation uses an index and 
+ is light on memory, depending on hardware.  It is possible that
+ stress on the hardware will increase as the number of requests
+ increase, but multiple volumes and/or load balancing could be used to mitigate this in 
+ a more advanced system.
+
+ V. References
+
+ I looked around to answer a few questions like what Ruby servers are available
+ and how convert between decimal and other bases in Ruby.
+
+http://stackoverflow.com/questions/6343949/selective-file-read-in-ruby
+http://www.sinatrarb.com/intro.html
+http://stackoverflow.com/questions/4791320/route-handlers-inside-a-class
+http://ruby-doc.org/
+http://stackoverflow.com/questions/30563697/convert-a-hex-string-to-a-hex-int
+http://stackoverflow.com/questions/84421/converting-an-integer-to-a-hexadecimal-string-in-ruby
+http://serverfault.com/questions/2107/tools-for-load-testing-http-servers
+ 
+ VI. Libraries
+ 
+ I use Sinatra for my server.  I was not aware of it before this exercise.
+ I chose it because I wanted something lite, unlike Apache.  This is mostly
+ in order to simplify the build step.  But I am mostly pleased with the result
+ as it takes minimal setup.  I simply had to install a few things using Gem
+ and then run the code.
+
+ VII. Time Spent
+
+ I spend about 7 hours on the exercise, mostly because of funny surprises with Sinatra.
+ I found it was difficult to get data in and ended up having to insert the data file
+ path into the config.yml file.  Following this, I decided not to continue to make the implemenation
+ as configuration as I had intended in order to save time.
+
+ If I had more time I might try to decrease the size of the index as described above
+ and I might finish what I started with the configuration.  I might also try to
+ reduce the size of the index by playing around with the encoding.
+
+ I could also make the implementation a bit more user friendly.  I could add a little
+ more checking of user input and error handling.  I could also do a better job of dealing
+ with the file paths so that the user doesn't have to provide a path relative
+ to the shell script.
+
+ VIII. Critique
+
+ There doesn't seem to be much to critique.  The implementation is pretty simple.
+
